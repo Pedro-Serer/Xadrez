@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+  <head>
+    <meta charset="utf-8">
+    <script type="text/javascript" src="jquery-3.3.1.js"></script>
+    <script src="Chess.js"></script>
+    <title>Tabuleiro de xadrez</title>
+    <style>
+      img{
+        max-width: 100%;
+      }
+
+      div{
+        width: 12.5%;
+        height: 60px;
+        display: inline-block;
+        margin-bottom: -4px;
+      }
+
+
+      #tabuleiro{
+        position: relative;
+        top: 60px;
+        left: 23%;
+        border: 2px solid black;
+        padding-right: -50px;
+        width: 36.01%;
+        height: 477px;
+      }
+
+      #pgn{
+        position: relative;
+        bottom: 547px;
+        left: 70%;
+        border: 1px solid black;
+        box-shadow: 1px 1px 1px;
+        width: 250px;
+        height: 478px;
+        overflow-y: scroll;
+        overflow-x: hidden;
+      }
+
+      img{
+        display: block;
+        margin-left: auto;
+        margin-right: auto;
+        cursor: pointer;
+      }
+
+    </style>
+  </head>
+  <body onload="posicaoInicial()">
+    <button onclick="location.reload()">Nova partida</button>
+    <div id="tabuleiro"></div>
+    <script>
+      var x = 0;
+      var num = 0;
+      var game = new Chess();
+      var tabuleiro = document.getElementById('tabuleiro');
+      var letras  = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+      var numeros = [,'1', '2', '3', '4', '5', '6', '7', '8'];
+
+      for(var i=8; i>0; i--){
+        for(var j=0; j<8; j++){
+          num++;
+          var div = document.createElement("DIV");
+
+          div.setAttribute("id", num);
+          div.setAttribute("ondrop", "drop_handler(event)");
+          div.setAttribute("ondragover", "dragover_handler(event)");
+          tabuleiro.appendChild(div);
+
+          var elemento = document.getElementById(num);
+          div.setAttribute("class", letras[j] + numeros[i]);
+
+           if(num % 2 == 0 && i % 2 == 0 || num % 2 != 0 && i % 2 != 0){
+            elemento.style.backgroundColor = "#5858FA";
+            elemento.style.color = "white";
+          }
+        }
+        document.write("</br>");
+      }
+
+      function dragstart_handler(ev){
+        ev.dataTransfer.setData("text/plain", ev.target.id);
+        var casaPai = ev.target.parentElement.className;
+
+        if (ev.target.className != 'P') {
+            sessionStorage.setItem('Lance', ev.target.className[0]); //Salva o nome da peça no session Storage
+        }
+        sessionStorage.setItem('LanceID', casaPai);
+        sessionStorage.setItem('LanceClass', ev.target.classList.item(1));
+      }
+
+      function dragover_handler(ev){
+        ev.preventDefault();
+        ev.dataTransfer.dropEffect = "move";
+      }
+
+      function drop_handler(ev){
+        ev.preventDefault();
+        var data = ev.dataTransfer.getData("text/plain"), dataLance;
+        ev.target.appendChild(document.getElementById(data));
+
+        /*Associa o nome do session Storage ao nome da casa. Se for diferente de peão mostra apenas o nome da casa*/
+        let peca = sessionStorage.getItem('Lance');
+        sessionStorage.setItem('LanceFinal', ev.target.className);
+
+        var lanceID = sessionStorage.getItem('LanceID'); //Lance inicial
+        var lanceFinal = sessionStorage.getItem('LanceFinal');
+        var lanceClass = sessionStorage.getItem('LanceClass');
+        let casa = document.getElementsByClassName(lanceID)[0];
+        peca ? dataLance = peca + ev.target.className : dataLance = ev.target.className;
+
+        if(ev.target.classList.item(1) == 'w' || ev.target.classList.item(1) == 'b'){
+          //Se na casa existir um filho, replace pelo novo.
+          let pecaMovida = ev.target.children[0];
+          var pecaCapturada = document.getElementsByClassName(lanceFinal)[0];
+          var dodo = pecaCapturada.parentNode;
+          dodo.removeChild(pecaCapturada);
+          dodo.appendChild(pecaMovida);
+
+          if(dodo.hasChildNodes()){
+            lanceFinal = dodo.className;
+          }
+        }
+
+        /*Roque 0-0*/
+        if(lanceID == "e1" && lanceFinal == "g1"){
+          var torreWH = document.getElementsByClassName('h1')[0].childNodes[0], roqueMenor = document.getElementById("62");
+          roqueMenor.appendChild(torreWH);
+        }
+
+        if(lanceID == "e8" && lanceFinal == "g8"){
+          var torreBH = document.getElementsByClassName('h8')[0].childNodes[0], roqueMenor2 = document.getElementById("6");
+          roqueMenor2.appendChild(torreBH);
+        }
+
+        /*Lances irregulares*/
+        if((game.turn() !== lanceClass)){
+          let pecaDoLanceFinal = ev.target.children[0];
+          casa.appendChild(pecaDoLanceFinal);
+        }
+
+        if(game.turn() == lanceClass){
+          var move = game.move({
+            from: lanceID,
+            to: lanceFinal,
+          });
+
+          if((move === null)){
+            let pecaDoLanceFinal = ev.target.children[0];
+            console.log(pecaDoLanceFinal);
+            casa.appendChild(pecaDoLanceFinal);
+          }
+        }
+
+        if(game.in_checkmate() || game.in_draw() || game.in_threefold_repetition() || game.insufficient_material() || game.in_stalemate()){
+          alert("Fim de jogo!");
+          let pecaDoLanceFinal = ev.target.children[0];
+          casa.appendChild(pecaDoLanceFinal);
+        }
+
+        /*CRIAR PGN*/
+        var pgn = document.getElementById('pgn');
+        var moves = game.moves();
+        var mov = moves[dataLance];
+        game.move(mov);
+
+
+
+        var notacao = document.createTextNode(game.pgn().slice(game.pgn().lastIndexOf(" ")));
+        pgn.appendChild(notacao);
+
+        console.log(game.pgn().slice(0, game.pgn().lastIndexOf(" ")));
+
+        sessionStorage.clear();
+      }
+
+
+    </script>
+      <!--Peças Brancas-->
+    <img id="wK" src="Pecas/wK.png" class="K w" draggable="true" ondragstart="dragstart_handler(event)" width="50" height="55">
+    <img id="wQ" src="Pecas/wQ.png" class="Q w" draggable="true" ondragstart="dragstart_handler(event)" width="50" height="55">
+    <img id="wB1" src="Pecas/wB.png" class="B1 w" draggable="true" ondragstart="dragstart_handler(event)" width="50" height="55">
+    <img id="wB2" src="Pecas/wB.png" class="B2 w" draggable="true" ondragstart="dragstart_handler(event)" width="50" height="55">
+    <img id="wN1" src="Pecas/wN.png" class="N1 w" draggable="true" ondragstart="dragstart_handler(event)" width="50" height="55">
+    <img id="wN2" src="Pecas/wN.png" class="N2 w" draggable="true" ondragstart="dragstart_handler(event)" width="50" height="55">
+    <img id="wR1" src="Pecas/wR.png" class="R1 w" draggable="true" ondragstart="dragstart_handler(event)" width="50" height="55">
+    <img id="wR2" src="Pecas/wR.png" class="R2 w" draggable="true" ondragstart="dragstart_handler(event)" width="50" height="55">
+    <img id="wP1" src="Pecas/wP.png" class="P1 w" draggable="true" ondragstart="dragstart_handler(event)" width="50" height="55">
+    <img id="wP2" src="Pecas/wP.png" class="P2 w" draggable="true" ondragstart="dragstart_handler(event)" width="50" height="55">
+    <img id="wP3" src="Pecas/wP.png" class="P3 w" draggable="true" ondragstart="dragstart_handler(event)" width="50" height="55">
+    <img id="wP4" src="Pecas/wP.png" class="P4 w" draggable="true" ondragstart="dragstart_handler(event)" width="50" height="55">
+    <img id="wP5" src="Pecas/wP.png" class="P5 w" draggable="true" ondragstart="dragstart_handler(event)" width="50" height="55">
+    <img id="wP6" src="Pecas/wP.png" class="P6 w" draggable="true" ondragstart="dragstart_handler(event)" width="50" height="55">
+    <img id="wP7" src="Pecas/wP.png" class="P7 w" draggable="true" ondragstart="dragstart_handler(event)" width="50" height="55">
+    <img id="wP8" src="Pecas/wP.png" class="P8 w" draggable="true" ondragstart="dragstart_handler(event)" width="50" height="55">
+      <!--Peças Pretas-->
+    <img id="bK" src="Pecas/bK.png" class="K b" draggable="true" ondragstart="dragstart_handler(event)" width="50" height="55">
+    <img id="bQ" src="Pecas/bQ.png" class="Q b" draggable="true" ondragstart="dragstart_handler(event)" width="50" height="55">
+    <img id="bB1" src="Pecas/bB.png" class="B1 b" draggable="true" ondragstart="dragstart_handler(event)" width="50" height="55">
+    <img id="bB2" src="Pecas/bB.png" class="B2 b" draggable="true" ondragstart="dragstart_handler(event)" width="50" height="55">
+    <img id="bN1" src="Pecas/bN.png" class="N1 b" draggable="true" ondragstart="dragstart_handler(event)" width="50" height="55">
+    <img id="bN2" src="Pecas/bN.png" class="N2 b" draggable="true" ondragstart="dragstart_handler(event)" width="50" height="55">
+    <img id="bR1" src="Pecas/bR.png" class="R1 b" draggable="true" ondragstart="dragstart_handler(event)" width="50" height="55">
+    <img id="bR2" src="Pecas/bR.png" class="R2 b" draggable="true" ondragstart="dragstart_handler(event)" width="50" height="55">
+    <img id="bP1" src="Pecas/bP.png" class="P1 b" draggable="true" ondragstart="dragstart_handler(event)" width="50" height="55">
+    <img id="bP2" src="Pecas/bP.png" class="P2 b" draggable="true" ondragstart="dragstart_handler(event)" width="50" height="55">
+    <img id="bP3" src="Pecas/bP.png" class="P3 b" draggable="true" ondragstart="dragstart_handler(event)" width="50" height="55">
+    <img id="bP4" src="Pecas/bP.png" class="P4 b" draggable="true" ondragstart="dragstart_handler(event)" width="50" height="55">
+    <img id="bP5" src="Pecas/bP.png" class="P5 b" draggable="true" ondragstart="dragstart_handler(event)" width="50" height="55">
+    <img id="bP6" src="Pecas/bP.png" class="P6 b" draggable="true" ondragstart="dragstart_handler(event)" width="50" height="55">
+    <img id="bP7" src="Pecas/bP.png" class="P7 b" draggable="true" ondragstart="dragstart_handler(event)" width="50" height="55">
+    <img id="bP8" src="Pecas/bP.png" class="P8 b" draggable="true" ondragstart="dragstart_handler(event)" width="50" height="55">
+
+    <div id="pgn"></div>
+
+    <script>
+      var stockfish = new Worker("stockfish.js");
+
+      function posicaoInicial(){
+        for (let i = 1; i < 9; i++) {
+          var pecasBrancas = ['R1', 'N1', 'B1', 'Q', 'K', 'B2', 'N2', 'R2'];
+          var brancas = document.getElementById('w' + pecasBrancas[i-1]);
+          let casaMaior = document.getElementById(Number('56') + i);
+          var peoesBrancos = document.getElementById('wP' + i);
+          let casaMenor = document.getElementById(Number('48') + i);
+
+          casaMaior.appendChild(brancas);
+          casaMenor.appendChild(peoesBrancos);
+        }
+
+        for (let i = 1; i < 9; i++) {
+          var pecasPretas = ['R1', 'N1', 'B1', 'Q', 'K', 'B2', 'N2', 'R2'];
+          var pretas = document.getElementById('b' + pecasPretas[i-1]);
+          let casaMaior = document.getElementById(Number('0') + i);
+          var peoesPretos = document.getElementById('bP' + i);
+          let casaMenor = document.getElementById(Number('8') + i);
+
+          casaMaior.appendChild(pretas);
+          casaMenor.appendChild(peoesPretos);
+        }
+      }
+    </script>
+  </body>
+</html>
